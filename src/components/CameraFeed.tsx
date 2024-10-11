@@ -3,9 +3,10 @@ import './CameraFeed.scss';
 
 interface CameraFeedProps {
   stream: MediaStream | null;
+  isFullScreen: boolean;
 }
 
-export const CameraFeed = forwardRef(({ stream }: CameraFeedProps, ref: ForwardedRef<HTMLVideoElement>) => {
+export const CameraFeed = forwardRef(({ stream, isFullScreen }: CameraFeedProps, ref: ForwardedRef<HTMLVideoElement>) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -16,7 +17,7 @@ export const CameraFeed = forwardRef(({ stream }: CameraFeedProps, ref: Forwarde
   }, [stream, ref]);
 
   return (
-    <div className="camera-feed">
+    <div className={`camera-feed ${isFullScreen ? 'fullscreen' : ''}`}>
       {stream ? (
         <video ref={ref || localVideoRef} autoPlay playsInline />
       ) : (

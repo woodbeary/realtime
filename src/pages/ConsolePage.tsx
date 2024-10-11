@@ -19,7 +19,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2 } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -133,6 +133,9 @@ export function ConsolePage() {
   const [isCapturingImage, setIsCapturingImage] = useState(false);
   const imageAnalysisResultRef = useRef<string | null>(null);
 
+  const [isStarted, setIsStarted] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   /**
    * Utility for formatting the timing of logs
    */
@@ -171,6 +174,7 @@ export function ConsolePage() {
    * WavRecorder taks speech input, WavStreamPlayer output, client is API client
    */
   const connectConversation = useCallback(async () => {
+    console.log("Starting connection process...");
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -181,24 +185,38 @@ export function ConsolePage() {
     setRealtimeEvents([]);
     setItems(client.conversation.getItems());
 
+    console.log("Connecting to microphone...");
     // Connect to microphone
     await wavRecorder.begin();
+    console.log("Microphone connected successfully.");
 
+    console.log("Connecting to audio output...");
     // Connect to audio output
     await wavStreamPlayer.connect();
+    console.log("Audio output connected successfully.");
 
+    console.log("Connecting to realtime API...");
     // Connect to realtime API
     await client.connect();
+    console.log("Realtime API connected successfully.");
+
+    // Set up VAD mode
+    console.log("Setting up VAD mode...");
+    await client.updateSession({ turn_detection: { type: 'server_vad' } });
+
     client.sendUserMessageContent([
       {
         type: `input_text`,
         text: `Hello!`,
-        // text: `For testing purposes, I want you to list ten car brands. Number each item, e.g. "one (or whatever number you are one): the item name".`
       },
     ]);
 
+    console.log("Starting VAD mode...");
     if (client.getTurnDetectionType() === 'server_vad') {
       await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+      console.log("VAD mode started successfully.");
+    } else {
+      console.log("VAD mode not initiated. Current turn detection type:", client.getTurnDetectionType());
     }
   }, []);
 
@@ -536,14 +554,18 @@ export function ConsolePage() {
     };
   }, []);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
+    console.log("Starting camera...");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setCameraStream(stream);
+      console.log("Camera started successfully.");
+      return true;
     } catch (error) {
       console.error('Error accessing camera:', error);
+      return false;
     }
-  };
+  }, []);
 
   const stopCamera = () => {
     if (cameraStream) {
@@ -646,6 +668,53 @@ export function ConsolePage() {
     }
   }, [videoRef, analyzeImage]);
 
+  const toggleAll = useCallback(async () => {
+    if (isStarted) {
+      console.log("Stopping all systems...");
+      await disconnectConversation();
+      stopCamera();
+      setIsStarted(false);
+      console.log("All systems stopped.");
+    } else {
+      console.log("Starting all systems...");
+      const cameraStarted = await startCamera();
+      if (cameraStarted) {
+        try {
+          await connectConversation();
+          setIsStarted(true);
+          console.log("All systems started successfully.");
+        } catch (error) {
+          console.error("Error starting conversation:", error);
+          stopCamera();
+          setIsStarted(false);
+        }
+      } else {
+        console.log("Failed to start all systems due to camera error.");
+      }
+    }
+  }, [isStarted, connectConversation, disconnectConversation, startCamera, stopCamera]);
+
+  const toggleFullScreen = useCallback(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    if (!document.fullscreenElement) {
+      videoElement.requestFullscreen().then(() => {
+        setIsFullScreen(true);
+      }).catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => {
+          setIsFullScreen(false);
+        }).catch(err => {
+          console.error(`Error attempting to exit full-screen mode: ${err.message}`);
+        });
+      }
+    }
+  }, []);
+
   /**
    * Render the application
    */
@@ -656,241 +725,23 @@ export function ConsolePage() {
           <img src="/openai-logomark.svg" />
           <span>realtime console</span>
         </div>
-        <div className="content-api-key">
-          {!LOCAL_RELAY_SERVER_URL && (
-            <Button
-              icon={Edit}
-              iconPosition="end"
-              buttonStyle="flush"
-              label={`api key: ${apiKey.slice(0, 3)}...`}
-              onClick={() => resetAPIKey()}
-            />
-          )}
-        </div>
       </div>
-      <div className="content-main">
-        <div className="content-logs">
-          <div className="content-block events">
-            <div className="visualization">
-              <div className="visualization-entry client">
-                <canvas ref={clientCanvasRef} />
-              </div>
-              <div className="visualization-entry server">
-                <canvas ref={serverCanvasRef} />
-              </div>
-            </div>
-            <div className="content-block-title">events</div>
-            <div className="content-block-body" ref={eventsScrollRef}>
-              {!realtimeEvents.length && `awaiting connection...`}
-              {realtimeEvents.map((realtimeEvent, index) => {
-                const count = realtimeEvent.count;
-                const event = { ...realtimeEvent.event };
-                if (event.type === 'input_audio_buffer.append') {
-                  event.audio = `[trimmed: ${event.audio.length} bytes]`;
-                } else if (event.type === 'response.audio.delta') {
-                  event.delta = `[trimmed: ${event.delta.length} bytes]`;
-                }
-                return (
-                  <div className="event" key={`${realtimeEvent.time}-${index}`}>
-                    <div className="event-timestamp">
-                      {formatTime(realtimeEvent.time)}
-                    </div>
-                    <div className="event-details">
-                      <div
-                        className="event-summary"
-                        onClick={() => {
-                          // toggle event details
-                          const id = event.event_id;
-                          const expanded = { ...expandedEvents };
-                          if (expanded[id]) {
-                            delete expanded[id];
-                          } else {
-                            expanded[id] = true;
-                          }
-                          setExpandedEvents(expanded);
-                        }}
-                      >
-                        <div
-                          className={`event-source ${
-                            event.type === 'error'
-                              ? 'error'
-                              : realtimeEvent.source
-                          }`}
-                        >
-                          {realtimeEvent.source === 'client' ? (
-                            <ArrowUp />
-                          ) : (
-                            <ArrowDown />
-                          )}
-                          <span>
-                            {event.type === 'error'
-                              ? 'error!'
-                              : realtimeEvent.source}
-                          </span>
-                        </div>
-                        <div className="event-type">
-                          {event.type}
-                          {count && ` (${count})`}
-                        </div>
-                      </div>
-                      {!!expandedEvents[event.event_id] && (
-                        <div className="event-payload">
-                          {JSON.stringify(event, null, 2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="content-block conversation">
-            <div className="content-block-title">conversation</div>
-            <div className="content-block-body" data-conversation-content>
-              {!items.length && `awaiting connection...`}
-              {items.map((conversationItem, i) => {
-                return (
-                  <div className="conversation-item" key={conversationItem.id}>
-                    <div className={`speaker ${conversationItem.role || ''}`}>
-                      <div>
-                        {(
-                          conversationItem.role || conversationItem.type
-                        ).replaceAll('_', ' ')}
-                      </div>
-                      <div
-                        className="close"
-                        onClick={() =>
-                          deleteConversationItem(conversationItem.id)
-                        }
-                      >
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`}>
-                      {/* tool response */}
-                      {conversationItem.type === 'function_call_output' && (
-                        <div>{conversationItem.formatted.output}</div>
-                      )}
-                      {/* tool call */}
-                      {!!conversationItem.formatted.tool && (
-                        <div>
-                          {conversationItem.formatted.tool.name}(
-                          {conversationItem.formatted.tool.arguments})
-                        </div>
-                      )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'user' && (
-                          <div>
-                            {conversationItem.formatted.transcript ||
-                              (conversationItem.formatted.audio?.length
-                                ? '(awaiting transcript)'
-                                : conversationItem.formatted.text ||
-                                  '(item sent)')}
-                          </div>
-                        )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'assistant' && (
-                          <div>
-                            {conversationItem.formatted.transcript ||
-                              conversationItem.formatted.text ||
-                              '(truncated)'}
-                          </div>
-                        )}
-                      {conversationItem.formatted.file && (
-                        <audio
-                          src={conversationItem.formatted.file.url}
-                          controls
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="content-actions">
-            <Toggle
-              defaultValue={false}
-              labels={['manual', 'vad']}
-              values={['none', 'server_vad']}
-              onChange={(_, value) => changeTurnEndType(value)}
+      <div className={`content-main centered`}>
+        <div className="camera-container">
+          <CameraFeed stream={cameraStream} ref={videoRef} isFullScreen={isFullScreen} />
+          <div className="button-container">
+            <Button
+              label={isStarted ? "Stop" : "Start"}
+              buttonStyle={isStarted ? "alert" : "action"}
+              onClick={toggleAll}
             />
-            <div className="spacer" />
-            {isConnected && canPushToTalk && (
+            {isStarted && (
               <Button
-                label={isRecording ? 'release to send' : 'push to talk'}
-                buttonStyle={isRecording ? 'alert' : 'regular'}
-                disabled={!isConnected || !canPushToTalk}
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
+                icon={isFullScreen ? Minimize2 : Maximize2}
+                buttonStyle="icon"
+                onClick={toggleFullScreen}
               />
             )}
-            <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
-            />
-          </div>
-        </div>
-        <div className="content-right">
-          <div className="content-block map">
-            <div className="content-block-title">get_weather()</div>
-            <div className="content-block-title bottom">
-              {marker?.location || 'not yet retrieved'}
-              {!!marker?.temperature && (
-                <>
-                  <br />
-                  🌡️ {marker.temperature.value} {marker.temperature.units}
-                </>
-              )}
-              {!!marker?.wind_speed && (
-                <>
-                  {' '}
-                  🍃 {marker.wind_speed.value} {marker.wind_speed.units}
-                </>
-              )}
-            </div>
-            <div className="content-block-body full">
-              {coords && (
-                <Map
-                  center={[coords.lat, coords.lng]}
-                  location={coords.location}
-                />
-              )}
-            </div>
-          </div>
-          <div className="content-block kv">
-            <div className="content-block-title">set_memory()</div>
-            <div className="content-block-body content-kv">
-              {JSON.stringify(memoryKv, null, 2)}
-            </div>
-          </div>
-          <div className="content-block camera">
-            <div className="content-block-title">Camera</div>
-            <div className="content-block-body">
-              <CameraFeed stream={cameraStream} ref={videoRef} />
-              {isCapturingImage && <div className="capturing-indicator">Capturing and analyzing image...</div>}
-              {cameraStream ? (
-                <Button
-                  label="Stop Camera"
-                  icon={X}
-                  onClick={stopCamera}
-                  buttonStyle="alert"
-                />
-              ) : (
-                <Button
-                  label="Start Camera"
-                  icon={Camera}
-                  onClick={startCamera}
-                  buttonStyle="regular"
-                />
-              )}
-            </div>
           </div>
         </div>
       </div>

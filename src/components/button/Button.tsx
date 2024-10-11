@@ -9,7 +9,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   iconPosition?: 'start' | 'end';
   iconColor?: 'red' | 'green' | 'grey';
   iconFill?: boolean;
-  buttonStyle?: 'regular' | 'action' | 'alert' | 'flush';
+  buttonStyle?: 'regular' | 'action' | 'alert' | 'flush' | 'icon'; // Add 'icon' here
 }
 
 export function Button({
@@ -39,7 +39,7 @@ export function Button({
           <StartIcon />
         </span>
       )}
-      <span className="label">{label}</span>
+      {buttonStyle !== 'icon' && <span className="label">{label}</span>}
       {EndIcon && (
         <span className="icon icon-end">
           <EndIcon />

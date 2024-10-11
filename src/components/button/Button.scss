@@ -80,4 +80,23 @@
       fill: currentColor;
     }
   }
+
+  &.button-style-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    background-color: #ececf1;
+    
+    &:hover:not([disabled]) {
+      background-color: #d8d8d8;
+    }
+
+    .icon {
+      margin: 0;
+    }
+  }
 }
