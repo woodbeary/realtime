@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { RealtimeClient } from '@openai/realtime-api-beta';
+import axios from 'axios';
 
 export class RealtimeRelay {
   constructor(apiKey) {
@@ -82,3 +83,6 @@ export class RealtimeRelay {
     console.log(`[RealtimeRelay]`, ...args);
   }
 }
+
+// Note: We're not exporting the router here as it's not being used in this file.
+// If you need to add routes, you should do it in the index.js file.

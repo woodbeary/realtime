@@ -19,13 +19,17 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
+import { Buffer } from 'buffer';
+import axios from 'axios'; // Make sure to install axios: npm install axios
+import { CameraFeed } from '../components/CameraFeed';
+import debounce from 'lodash/debounce';
 
 /**
  * Type for result from get_weather() function call
@@ -102,6 +106,7 @@ export function ConsolePage() {
   const eventsScrollHeightRef = useRef(0);
   const eventsScrollRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<string>(new Date().toISOString());
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   /**
    * All of our variables for displaying application state
@@ -124,6 +129,9 @@ export function ConsolePage() {
     lng: -122.418137,
   });
   const [marker, setMarker] = useState<Coordinates | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isCapturingImage, setIsCapturingImage] = useState(false);
+  const imageAnalysisResultRef = useRef<string | null>(null);
 
   /**
    * Utility for formatting the timing of logs
@@ -455,6 +463,33 @@ export function ConsolePage() {
       }
     );
 
+    // Add this new tool
+    client.addTool(
+      {
+        name: 'capture_image',
+        description: 'Captures an image from the camera and analyzes it.',
+        parameters: {
+          type: 'object',
+          properties: {},
+          required: [],
+        },
+      },
+      async () => {
+        await captureAndSendImage();
+        // Wait for the image analysis to complete
+        while (isCapturingImage) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        const result = imageAnalysisResultRef.current || "No image analysis result available.";
+        imageAnalysisResultRef.current = null;
+        return { 
+          success: true, 
+          message: 'Image captured and analyzed.',
+          result: result
+        };
+      }
+    );
+
     // handle realtime events from client + server for event logging
     client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
       setRealtimeEvents((realtimeEvents) => {
@@ -489,6 +524,7 @@ export function ConsolePage() {
         );
         item.formatted.file = wavFile;
       }
+      
       setItems(items);
     });
 
@@ -499,6 +535,116 @@ export function ConsolePage() {
       client.reset();
     };
   }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStream(stream);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+  };
+
+  const analyzeImage = async (base64Image: string): Promise<string> => {
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY || '';
+    
+    if (!apiKey) {
+      console.error('OpenAI API key is not set');
+      return 'Error: API key not set';
+    }
+
+    try {
+      console.log('Sending request to OpenAI Vision API...');
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Describe this image in detail, focusing on the person's appearance, outfit, hairstyle, and any notable features or background elements. Be specific about colors, styles, and overall impression, but don't make any judgments or suggestions." },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/jpeg;base64,${base64Image}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 300
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          }
+        }
+      );
+
+      console.log('Received response from OpenAI Vision API:', response.data);
+      return response.data.choices[0].message.content;
+    } catch (error: any) {
+      console.error('Error calling OpenAI Vision API:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+        return `Error analyzing image: ${error.response.status} - ${JSON.stringify(error.response.data)}`;
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        return `Error analyzing image: No response received from the server`;
+      } else {
+        console.error('Error setting up request:', error.message);
+        return `Error analyzing image: ${error.message}`;
+      }
+    }
+  };
+
+  const captureAndSendImage = useCallback(async () => {
+    if (videoRef.current) {
+      setIsCapturingImage(true);
+      imageAnalysisResultRef.current = null;
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      
+      // Resize the image to 512x512
+      const size = 512;
+      canvas.width = size;
+      canvas.height = size;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Draw the video frame onto the canvas, resizing it
+        ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, size, size);
+        
+        // Convert to JPEG with 80% quality
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const base64Image = imageDataUrl.split(',')[1];
+
+        try {
+          const visionResponse = await analyzeImage(base64Image);
+          imageAnalysisResultRef.current = visionResponse;
+        } catch (error) {
+          console.error('Error in captureAndSendImage:', error);
+          imageAnalysisResultRef.current = "Error: Unable to analyze the image.";
+        } finally {
+          setIsCapturingImage(false);
+        }
+      }
+    }
+  }, [videoRef, analyzeImage]);
 
   /**
    * Render the application
@@ -536,7 +682,7 @@ export function ConsolePage() {
             <div className="content-block-title">events</div>
             <div className="content-block-body" ref={eventsScrollRef}>
               {!realtimeEvents.length && `awaiting connection...`}
-              {realtimeEvents.map((realtimeEvent, i) => {
+              {realtimeEvents.map((realtimeEvent, index) => {
                 const count = realtimeEvent.count;
                 const event = { ...realtimeEvent.event };
                 if (event.type === 'input_audio_buffer.append') {
@@ -545,7 +691,7 @@ export function ConsolePage() {
                   event.delta = `[trimmed: ${event.delta.length} bytes]`;
                 }
                 return (
-                  <div className="event" key={event.event_id}>
+                  <div className="event" key={`${realtimeEvent.time}-${index}`}>
                     <div className="event-timestamp">
                       {formatTime(realtimeEvent.time)}
                     </div>
@@ -722,6 +868,28 @@ export function ConsolePage() {
             <div className="content-block-title">set_memory()</div>
             <div className="content-block-body content-kv">
               {JSON.stringify(memoryKv, null, 2)}
+            </div>
+          </div>
+          <div className="content-block camera">
+            <div className="content-block-title">Camera</div>
+            <div className="content-block-body">
+              <CameraFeed stream={cameraStream} ref={videoRef} />
+              {isCapturingImage && <div className="capturing-indicator">Capturing and analyzing image...</div>}
+              {cameraStream ? (
+                <Button
+                  label="Stop Camera"
+                  icon={X}
+                  onClick={stopCamera}
+                  buttonStyle="alert"
+                />
+              ) : (
+                <Button
+                  label="Start Camera"
+                  icon={Camera}
+                  onClick={startCamera}
+                  buttonStyle="regular"
+                />
+              )}
             </div>
           </div>
         </div>
