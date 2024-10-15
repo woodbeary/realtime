@@ -19,7 +19,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2 } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -200,9 +200,9 @@ export function ConsolePage() {
     await client.connect();
     console.log("Realtime API connected successfully.");
 
-    // Set up VAD mode
-    console.log("Setting up VAD mode...");
-    await client.updateSession({ turn_detection: { type: 'server_vad' } });
+    // Set up push-to-talk mode by default
+    console.log("Setting up push-to-talk mode...");
+    await client.updateSession({ turn_detection: null });
 
     client.sendUserMessageContent([
       {
@@ -211,13 +211,7 @@ export function ConsolePage() {
       },
     ]);
 
-    console.log("Starting VAD mode...");
-    if (client.getTurnDetectionType() === 'server_vad') {
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-      console.log("VAD mode started successfully.");
-    } else {
-      console.log("VAD mode not initiated. Current turn detection type:", client.getTurnDetectionType());
-    }
+    console.log("Push-to-talk mode set up successfully.");
   }, []);
 
   /**
@@ -254,6 +248,7 @@ export function ConsolePage() {
    * .appendInputAudio() for each sample
    */
   const startRecording = async () => {
+    if (isRecording) return; // Don't start if already recording
     setIsRecording(true);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
@@ -270,6 +265,7 @@ export function ConsolePage() {
    * In push-to-talk mode, stop recording
    */
   const stopRecording = async () => {
+    if (!isRecording) return; // Don't stop if not recording
     setIsRecording(false);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
@@ -722,8 +718,8 @@ export function ConsolePage() {
     <div data-component="ConsolePage">
       <div className="content-top">
         <div className="content-title">
-          <img src="/openai-logomark.svg" />
-          <span>realtime console</span>
+          <img src="/logo.png" alt="Roasted.lol logo" />
+          <span className="web-name">roasted.lol</span>
         </div>
       </div>
       <div className={`content-main centered`}>
@@ -736,11 +732,20 @@ export function ConsolePage() {
               onClick={toggleAll}
             />
             {isStarted && (
-              <Button
-                icon={isFullScreen ? Minimize2 : Maximize2}
-                buttonStyle="icon"
-                onClick={toggleFullScreen}
-              />
+              <>
+                <Button
+                  icon={isFullScreen ? Minimize2 : Maximize2}
+                  buttonStyle="icon"
+                  onClick={toggleFullScreen}
+                />
+                <Button
+                  icon={Mic}
+                  buttonStyle={isRecording ? "alert" : "action"}
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onMouseLeave={stopRecording}
+                />
+              </>
             )}
           </div>
         </div>
