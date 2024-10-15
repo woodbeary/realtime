@@ -8,7 +8,11 @@
  * This will also require you to set OPENAI_API_KEY= in a `.env` file
  * You can run it with `npm run relay`, in parallel with `npm start`
  */
-const RELAY_SERVER_URL = process.env.REACT_APP_RELAY_SERVER_URL || 'wss://realtimeroasts.onrender.com';
+const RELAY_SERVER_URL = process.env.NODE_ENV === 'production'
+  ? 'wss://realtimeroasts.onrender.com'
+  : (process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || 'ws://localhost:10000');
+
+console.log('Using relay server:', RELAY_SERVER_URL);
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
