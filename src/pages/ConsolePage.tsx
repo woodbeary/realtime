@@ -8,10 +8,13 @@
  * This will also require you to set OPENAI_API_KEY= in a `.env` file
  * You can run it with `npm run relay`, in parallel with `npm start`
  */
-const LOCAL_RELAY_SERVER_URL: string =
-  process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
+const RELAY_SERVER_URL = process.env.NODE_ENV === 'production'
+  ? 'wss://realtimeroasts.onrender.com'
+  : (process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || 'ws://localhost:10000');
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+console.log('Using relay server:', RELAY_SERVER_URL);
+
+import React, { useState, FormEvent, useEffect, useRef, useCallback } from 'react';
 
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
@@ -19,7 +22,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2 } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -27,9 +30,10 @@ import { Map } from '../components/Map';
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
 import { Buffer } from 'buffer';
-import axios from 'axios'; // Make sure to install axios: npm install axios
+import axios from 'axios';
 import { CameraFeed } from '../components/CameraFeed';
 import debounce from 'lodash/debounce';
+import { useMediaQuery } from 'react-responsive';
 
 /**
  * Type for result from get_weather() function call
@@ -58,19 +62,49 @@ interface RealtimeEvent {
   event: { [key: string]: any };
 }
 
+interface PasswordModalProps {
+  onCorrectPassword: () => void;
+}
+
+const PasswordModal: React.FC<PasswordModalProps> = ({ onCorrectPassword }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (password === process.env.REACT_APP_PAGE_PASSWORD) {
+      onCorrectPassword();
+    } else {
+      setError('Incorrect password');
+    }
+  };
+
+  return (
+    <div className="password-modal">
+      <div className="modal-content">
+        <h2>Enter Password</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoFocus
+          />
+          <button type="submit">Submit</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+      </div>
+    </div>
+  );
+};
+
 export function ConsolePage() {
   /**
    * Ask user for API Key
    * If we're using the local relay server, we don't need this
    */
-  const apiKey = LOCAL_RELAY_SERVER_URL
-    ? ''
-    : localStorage.getItem('tmp::voice_api_key') ||
-      prompt('OpenAI API Key') ||
-      '';
-  if (apiKey !== '') {
-    localStorage.setItem('tmp::voice_api_key', apiKey);
-  }
+  const apiKey = ''; // We don't need the API key in the frontend anymore
 
   /**
    * Instantiate:
@@ -85,14 +119,9 @@ export function ConsolePage() {
     new WavStreamPlayer({ sampleRate: 24000 })
   );
   const clientRef = useRef<RealtimeClient>(
-    new RealtimeClient(
-      LOCAL_RELAY_SERVER_URL
-        ? { url: LOCAL_RELAY_SERVER_URL }
-        : {
-            apiKey: apiKey,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
-    )
+    new RealtimeClient({
+      url: RELAY_SERVER_URL,
+    })
   );
 
   /**
@@ -135,6 +164,10 @@ export function ConsolePage() {
 
   const [isStarted, setIsStarted] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const isMobile = useMediaQuery({ maxWidth: 767 });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   /**
    * Utility for formatting the timing of logs
@@ -200,9 +233,9 @@ export function ConsolePage() {
     await client.connect();
     console.log("Realtime API connected successfully.");
 
-    // Set up VAD mode
-    console.log("Setting up VAD mode...");
-    await client.updateSession({ turn_detection: { type: 'server_vad' } });
+    // Set up push-to-talk mode by default
+    console.log("Setting up push-to-talk mode...");
+    await client.updateSession({ turn_detection: null });
 
     client.sendUserMessageContent([
       {
@@ -211,13 +244,7 @@ export function ConsolePage() {
       },
     ]);
 
-    console.log("Starting VAD mode...");
-    if (client.getTurnDetectionType() === 'server_vad') {
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-      console.log("VAD mode started successfully.");
-    } else {
-      console.log("VAD mode not initiated. Current turn detection type:", client.getTurnDetectionType());
-    }
+    console.log("Push-to-talk mode set up successfully.");
   }, []);
 
   /**
@@ -254,6 +281,7 @@ export function ConsolePage() {
    * .appendInputAudio() for each sample
    */
   const startRecording = async () => {
+    if (isRecording) return; // Don't start if already recording
     setIsRecording(true);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
@@ -270,6 +298,7 @@ export function ConsolePage() {
    * In push-to-talk mode, stop recording
    */
   const stopRecording = async () => {
+    if (!isRecording) return; // Don't stop if not recording
     setIsRecording(false);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
@@ -715,6 +744,23 @@ export function ConsolePage() {
     }
   }, []);
 
+  // Add this useEffect to check for authentication when the component mounts
+  useEffect(() => {
+    const isAuth = localStorage.getItem('isAuthenticated');
+    if (isAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleCorrectPassword = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('isAuthenticated', 'true');
+  };
+
+  if (!isAuthenticated) {
+    return <PasswordModal onCorrectPassword={handleCorrectPassword} />;
+  }
+
   /**
    * Render the application
    */
@@ -722,8 +768,8 @@ export function ConsolePage() {
     <div data-component="ConsolePage">
       <div className="content-top">
         <div className="content-title">
-          <img src="/openai-logomark.svg" />
-          <span>realtime console</span>
+          <img src="/logo.png" alt="Roasted.lol logo" />
+          <span className="web-name">roasted.lol</span>
         </div>
       </div>
       <div className={`content-main centered`}>
@@ -736,11 +782,22 @@ export function ConsolePage() {
               onClick={toggleAll}
             />
             {isStarted && (
-              <Button
-                icon={isFullScreen ? Minimize2 : Maximize2}
-                buttonStyle="icon"
-                onClick={toggleFullScreen}
-              />
+              <>
+                <Button
+                  icon={isFullScreen ? Minimize2 : Maximize2}
+                  buttonStyle="icon"
+                  onClick={toggleFullScreen}
+                />
+                <Button
+                  icon={Mic}
+                  buttonStyle={isRecording ? "alert" : "action"}
+                  onMouseDown={isMobile ? startRecording : startRecording}
+                  onMouseUp={isMobile ? stopRecording : stopRecording}
+                  onMouseLeave={isMobile ? undefined : stopRecording}
+                  onTouchStart={isMobile ? startRecording : undefined}
+                  onTouchEnd={isMobile ? stopRecording : undefined}
+                />
+              </>
             )}
           </div>
         </div>

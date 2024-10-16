@@ -19,16 +19,27 @@
   .content-top {
     display: flex;
     align-items: center;
-    padding: 8px 16px;
-    min-height: 40px;
+    padding: 16px 24px;
+    min-height: 60px;
+    background-color: #101010;
+    
     .content-title {
       flex-grow: 1;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
+      
       img {
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
+      }
+      
+      .web-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        text-transform: lowercase;
+        letter-spacing: 1px;
       }
     }
   }
@@ -98,6 +109,16 @@
             justify-content: center;
             align-items: center;
             border-radius: 50%;
+          }
+          user-select: none; // Prevents text selection
+          -webkit-user-select: none; // For Safari
+          -moz-user-select: none; // For Firefox
+          -ms-user-select: none; // For IE10+/Edge
+        }
+
+        @media (max-width: 767px) {
+          button {
+            touch-action: none; // Prevents default touch actions
           }
         }
       }
@@ -355,6 +376,94 @@
       button {
         width: 100%;
         margin-bottom: 8px;
+      }
+    }
+  }
+
+  .password-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+
+    .modal-content {
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 300px;
+
+      h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+        text-align: center;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        input {
+          padding: 0.75rem;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 1rem;
+
+          &:focus {
+            outline: none;
+            border-color: #0099ff;
+          }
+        }
+
+        button {
+          padding: 0.75rem;
+          background-color: #0099ff;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+
+          &:hover {
+            background-color: #007acc;
+          }
+        }
+      }
+
+      .error {
+        color: #ff4444;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+    }
+  }
+
+  // Responsive styles
+  @media (max-width: 767px) {
+    .password-modal {
+      .modal-content {
+        padding: 1.5rem;
+
+        h2 {
+          font-size: 1.25rem;
+        }
+
+        form {
+          input, button {
+            padding: 0.6rem;
+            font-size: 0.9rem;
+          }
+        }
       }
     }
   }

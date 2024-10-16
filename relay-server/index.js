@@ -16,14 +16,16 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-const PORT = parseInt(process.env.PORT) || 8081;
+const PORT = parseInt(process.env.PORT) || 10000;
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://realtimeroasts.vercel.app'
+}));
 app.use(express.json({ limit: '50mb' }));
 
 const relay = new RealtimeRelay(OPENAI_API_KEY);
