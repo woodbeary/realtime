@@ -467,4 +467,27 @@
       }
     }
   }
+
+  .initialization-message,
+  .queue-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #f0f0f0;
+    color: #333;
+    text-align: center;
+    padding: 10px;
+    z-index: 1000;
+  }
+
+  .initialization-message {
+    background-color: #e6f7ff;
+    border-bottom: 1px solid #91d5ff;
+  }
+
+  .queue-message {
+    background-color: #fffbe6;
+    border-bottom: 1px solid #ffe58f;
+  }
 }
