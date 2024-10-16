@@ -170,6 +170,12 @@ export function ConsolePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   /**
+   * Add these new state variables
+   */
+  const [isServerInitializing, setIsServerInitializing] = useState(false);
+  const [isInQueue, setIsInQueue] = useState(false);
+
+  /**
    * Utility for formatting the timing of logs
    */
   const formatTime = useCallback((timestamp: string) => {
@@ -549,6 +555,13 @@ export function ConsolePage() {
           return realtimeEvents.concat(realtimeEvent);
         }
       });
+
+      // Add handling for new message types
+      if (realtimeEvent.event.type === 'cold_start') {
+        setIsServerInitializing(true);
+      } else if (realtimeEvent.event.type === 'queued') {
+        setIsInQueue(true);
+      }
     });
     client.on('error', (event: any) => console.error(event));
     client.on('conversation.interrupted', async () => {
@@ -580,6 +593,8 @@ export function ConsolePage() {
     return () => {
       // cleanup; resets to defaults
       client.reset();
+      setIsServerInitializing(false);
+      setIsInQueue(false);
     };
   }, []);
 
@@ -766,6 +781,16 @@ export function ConsolePage() {
    */
   return (
     <div data-component="ConsolePage">
+      {isServerInitializing && (
+        <div className="initialization-message">
+          Server is initializing. Please wait...
+        </div>
+      )}
+      {isInQueue && (
+        <div className="queue-message">
+          Server is at capacity. You are in the queue...
+        </div>
+      )}
       <div className="content-top">
         <div className="content-title">
           <img src="/logo.png" alt="Roasted.lol logo" />
