@@ -33,6 +33,7 @@ import { Buffer } from 'buffer';
 import axios from 'axios'; // Make sure to install axios: npm install axios
 import { CameraFeed } from '../components/CameraFeed';
 import debounce from 'lodash/debounce';
+import { useMediaQuery } from 'react-responsive';
 
 /**
  * Type for result from get_weather() function call
@@ -126,6 +127,8 @@ export function ConsolePage() {
 
   const [isStarted, setIsStarted] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const isMobile = useMediaQuery({ maxWidth: 767 });
 
   /**
    * Utility for formatting the timing of logs
@@ -732,9 +735,11 @@ export function ConsolePage() {
                 <Button
                   icon={Mic}
                   buttonStyle={isRecording ? "alert" : "action"}
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  onMouseLeave={stopRecording}
+                  onMouseDown={isMobile ? startRecording : startRecording}
+                  onMouseUp={isMobile ? stopRecording : stopRecording}
+                  onMouseLeave={isMobile ? undefined : stopRecording}
+                  onTouchStart={isMobile ? startRecording : undefined}
+                  onTouchEnd={isMobile ? stopRecording : undefined}
                 />
               </>
             )}
