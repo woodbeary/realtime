@@ -14,7 +14,7 @@ const RELAY_SERVER_URL = process.env.NODE_ENV === 'production'
 
 console.log('Using relay server:', RELAY_SERVER_URL);
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useState, FormEvent, useEffect, useRef, useCallback } from 'react';
 
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
@@ -22,7 +22,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -30,7 +30,7 @@ import { Map } from '../components/Map';
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
 import { Buffer } from 'buffer';
-import axios from 'axios'; // Make sure to install axios: npm install axios
+import axios from 'axios';
 import { CameraFeed } from '../components/CameraFeed';
 import debounce from 'lodash/debounce';
 import { useMediaQuery } from 'react-responsive';
@@ -61,6 +61,43 @@ interface RealtimeEvent {
   count?: number;
   event: { [key: string]: any };
 }
+
+interface PasswordModalProps {
+  onCorrectPassword: () => void;
+}
+
+const PasswordModal: React.FC<PasswordModalProps> = ({ onCorrectPassword }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (password === process.env.REACT_APP_PAGE_PASSWORD) {
+      onCorrectPassword();
+    } else {
+      setError('Incorrect password');
+    }
+  };
+
+  return (
+    <div className="password-modal">
+      <div className="modal-content">
+        <h2>Enter Password</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoFocus
+          />
+          <button type="submit">Submit</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+      </div>
+    </div>
+  );
+};
 
 export function ConsolePage() {
   /**
@@ -129,6 +166,8 @@ export function ConsolePage() {
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   const isMobile = useMediaQuery({ maxWidth: 767 });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   /**
    * Utility for formatting the timing of logs
@@ -704,6 +743,23 @@ export function ConsolePage() {
       }
     }
   }, []);
+
+  // Add this useEffect to check for authentication when the component mounts
+  useEffect(() => {
+    const isAuth = localStorage.getItem('isAuthenticated');
+    if (isAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleCorrectPassword = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('isAuthenticated', 'true');
+  };
+
+  if (!isAuthenticated) {
+    return <PasswordModal onCorrectPassword={handleCorrectPassword} />;
+  }
 
   /**
    * Render the application
