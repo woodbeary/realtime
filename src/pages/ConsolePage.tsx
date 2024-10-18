@@ -796,24 +796,26 @@ export function ConsolePage() {
             />
             {isStarted && (
               <>
-                <Button
-                  icon={isFullScreen ? Minimize2 : Maximize2}
-                  buttonStyle="icon"
-                  onClick={toggleFullScreen}
-                  className="small-button button-style-icon"
-                />
+                {!isMobile && (
+                  <Button
+                    icon={isFullScreen ? Minimize2 : Maximize2}
+                    buttonStyle="icon"
+                    onClick={toggleFullScreen}
+                    className="small-button button-style-icon"
+                  />
+                )}
                 <Button
                   icon={Mic}
                   label="Push to Talk"
                   buttonStyle={isRecording ? "alert" : "action"}
-                  onMouseDown={isMobile ? startRecording : startRecording}
-                  onMouseUp={isMobile ? stopRecording : stopRecording}
-                  onMouseLeave={isMobile ? undefined : stopRecording}
-                  onTouchStart={isMobile ? startRecording : undefined}
-                  onTouchEnd={isMobile ? stopRecording : undefined}
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onMouseLeave={stopRecording}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
                   className="large-button"
                 />
-                {isStarted && isMobile && (
+                {isMobile && (
                   <Button
                     icon={RotateCw}
                     buttonStyle="icon"

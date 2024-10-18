@@ -503,4 +503,29 @@
       }
     }
   }
+
+  .content-main {
+    .camera-container {
+      @media (max-width: 767px) {
+        width: 100%;
+        height: calc(100vh - 60px); // Adjust based on your header height
+        max-width: none;
+        aspect-ratio: auto;
+
+        .camera-feed {
+          height: 100%;
+          margin-bottom: 0;
+        }
+
+        .button-container {
+          position: absolute;
+          bottom: 20px;
+          left: 0;
+          right: 0;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 10px;
+        }
+      }
+    }
+  }
 }
