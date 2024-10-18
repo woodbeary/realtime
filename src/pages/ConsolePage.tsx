@@ -22,7 +22,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock, RotateCw } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -168,6 +168,8 @@ export function ConsolePage() {
   const isMobile = useMediaQuery({ maxWidth: 767 });
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const [isFrontCamera, setIsFrontCamera] = useState(true);
 
   /**
    * Utility for formatting the timing of logs
@@ -586,7 +588,9 @@ export function ConsolePage() {
   const startCamera = useCallback(async () => {
     console.log("Starting camera...");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: isFrontCamera ? "user" : "environment" } 
+      });
       setCameraStream(stream);
       console.log("Camera started successfully.");
       return true;
@@ -594,7 +598,7 @@ export function ConsolePage() {
       console.error('Error accessing camera:', error);
       return false;
     }
-  }, []);
+  }, [isFrontCamera]);
 
   const stopCamera = () => {
     if (cameraStream) {
@@ -757,6 +761,14 @@ export function ConsolePage() {
     localStorage.setItem('isAuthenticated', 'true');
   };
 
+  const handleCameraFlip = useCallback(async () => {
+    setIsFrontCamera(!isFrontCamera);
+    if (isStarted) {
+      stopCamera();
+      await startCamera();
+    }
+  }, [isFrontCamera, isStarted, stopCamera, startCamera]);
+
   if (!isAuthenticated) {
     return <PasswordModal onCorrectPassword={handleCorrectPassword} />;
   }
@@ -801,6 +813,14 @@ export function ConsolePage() {
                   onTouchEnd={isMobile ? stopRecording : undefined}
                   className="large-button"
                 />
+                {isStarted && isMobile && (
+                  <Button
+                    icon={RotateCw}
+                    buttonStyle="icon"
+                    onClick={handleCameraFlip}
+                    className="small-button button-style-icon"
+                  />
+                )}
               </>
             )}
           </div>

@@ -136,9 +136,25 @@
           -ms-user-select: none;
         }
 
+        .flip-camera-button {
+          display: none; // Hidden by default
+        }
+
         @media (max-width: 767px) {
           button {
             touch-action: none;
+          }
+          .flip-camera-button {
+            display: flex; // Show on mobile
+            flex: 0 0 auto;
+            width: 40px;
+            height: 40px;
+            font-size: 14px;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background-color: #0099ff;
+            color: white;
           }
         }
       }
