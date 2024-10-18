@@ -97,8 +97,17 @@
         align-items: center;
 
         button {
-          &:first-child {
+          &.small-button {
+            flex: 0 0 auto;
+            width: 80px;
+            height: 40px;
+            font-size: 14px;
+          }
+
+          &.large-button {
             flex: 1;
+            height: 48px;
+            font-size: 16px;
           }
 
           &.button-style-icon {
@@ -110,15 +119,26 @@
             align-items: center;
             border-radius: 50%;
           }
-          user-select: none; // Prevents text selection
-          -webkit-user-select: none; // For Safari
-          -moz-user-select: none; // For Firefox
-          -ms-user-select: none; // For IE10+/Edge
+
+          &[data-button-style="action"] {
+            background-color: #0099ff;
+            color: white;
+          }
+
+          &[data-button-style="alert"] {
+            background-color: #ff4444;
+            color: white;
+          }
+
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
         }
 
         @media (max-width: 767px) {
           button {
-            touch-action: none; // Prevents default touch actions
+            touch-action: none;
           }
         }
       }

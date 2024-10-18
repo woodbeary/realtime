@@ -780,6 +780,7 @@ export function ConsolePage() {
               label={isStarted ? "Stop" : "Start"}
               buttonStyle={isStarted ? "alert" : "action"}
               onClick={toggleAll}
+              className={isStarted ? "small-button" : "large-button"}
             />
             {isStarted && (
               <>
@@ -787,15 +788,18 @@ export function ConsolePage() {
                   icon={isFullScreen ? Minimize2 : Maximize2}
                   buttonStyle="icon"
                   onClick={toggleFullScreen}
+                  className="small-button button-style-icon"
                 />
                 <Button
                   icon={Mic}
+                  label="Push to Talk"
                   buttonStyle={isRecording ? "alert" : "action"}
                   onMouseDown={isMobile ? startRecording : startRecording}
                   onMouseUp={isMobile ? stopRecording : stopRecording}
                   onMouseLeave={isMobile ? undefined : stopRecording}
                   onTouchStart={isMobile ? startRecording : undefined}
                   onTouchEnd={isMobile ? stopRecording : undefined}
+                  className="large-button"
                 />
               </>
             )}
