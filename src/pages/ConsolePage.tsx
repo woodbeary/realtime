@@ -167,8 +167,6 @@ export function ConsolePage() {
 
   const isMobile = useMediaQuery({ maxWidth: 767 });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   const [isFrontCamera, setIsFrontCamera] = useState(true);
 
   /**
@@ -748,19 +746,6 @@ export function ConsolePage() {
     }
   }, []);
 
-  // Add this useEffect to check for authentication when the component mounts
-  useEffect(() => {
-    const isAuth = localStorage.getItem('isAuthenticated');
-    if (isAuth === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const handleCorrectPassword = () => {
-    setIsAuthenticated(true);
-    localStorage.setItem('isAuthenticated', 'true');
-  };
-
   const handleCameraFlip = useCallback(async () => {
     setIsFrontCamera(!isFrontCamera);
     if (isStarted) {
@@ -768,10 +753,6 @@ export function ConsolePage() {
       await startCamera();
     }
   }, [isFrontCamera, isStarted, stopCamera, startCamera]);
-
-  if (!isAuthenticated) {
-    return <PasswordModal onCorrectPassword={handleCorrectPassword} />;
-  }
 
   /**
    * Render the application
