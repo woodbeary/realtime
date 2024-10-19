@@ -19,6 +19,7 @@ export class WavStreamPlayer {
     this.analyser = null;
     this.trackSampleOffsets = {};
     this.interruptedTrackIds = {};
+    this.gainNode = null;
   }
 
   /**
@@ -27,9 +28,10 @@ export class WavStreamPlayer {
    */
   async connect() {
     this.context = new AudioContext({ sampleRate: this.sampleRate });
-    // Add this line to increase the default volume
-    this.context.gainNode = this.context.createGain();
-    this.context.gainNode.gain.setValueAtTime(1.5, this.context.currentTime); // Increase volume by 50%
+    // Create a GainNode and set its gain to 2 (doubling the volume)
+    this.gainNode = this.context.createGain();
+    this.gainNode.gain.setValueAtTime(2, this.context.currentTime);
+    
     if (this.context.state === 'suspended') {
       await this.context.resume();
     }
@@ -43,6 +45,9 @@ export class WavStreamPlayer {
     analyser.fftSize = 8192;
     analyser.smoothingTimeConstant = 0.1;
     this.analyser = analyser;
+    
+    // Connect the gain node to the destination
+    this.gainNode.connect(this.context.destination);
     return true;
   }
 
@@ -78,7 +83,7 @@ export class WavStreamPlayer {
    */
   _start() {
     const streamNode = new AudioWorkletNode(this.context, 'stream_processor');
-    streamNode.connect(this.context.destination);
+    streamNode.connect(this.gainNode);
     streamNode.port.onmessage = (e) => {
       const { event } = e.data;
       if (event === 'stop') {
@@ -157,6 +162,13 @@ export class WavStreamPlayer {
    */
   async interrupt() {
     return this.getTrackSampleOffset(true);
+  }
+
+  // Add a method to adjust volume
+  setVolume(volume) {
+    if (this.gainNode) {
+      this.gainNode.gain.setValueAtTime(volume, this.context.currentTime);
+    }
   }
 }
 

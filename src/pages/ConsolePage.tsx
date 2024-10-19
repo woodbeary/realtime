@@ -169,6 +169,8 @@ export function ConsolePage() {
 
   const [isFrontCamera, setIsFrontCamera] = useState(true);
 
+  const [volume, setVolume] = useState(2);
+
   /**
    * Utility for formatting the timing of logs
    */
@@ -699,7 +701,20 @@ export function ConsolePage() {
     }
   }, [videoRef, analyzeImage]);
 
+  const enableAudio = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+    audioContext.resume();
+  };
+
   const toggleAll = useCallback(async () => {
+    if (!isStarted) {
+      enableAudio();
+    }
     if (isStarted) {
       console.log("Stopping all systems...");
       await disconnectConversation();
@@ -754,6 +769,12 @@ export function ConsolePage() {
     }
   }, [isFrontCamera, isStarted, stopCamera, startCamera]);
 
+  // Add this function to handle volume changes
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+    wavStreamPlayerRef.current.setVolume(newVolume);
+  }, []);
+
   /**
    * Render the application
    */
@@ -804,6 +825,14 @@ export function ConsolePage() {
                     className="small-button button-style-icon"
                   />
                 )}
+                <input
+                  type="range"
+                  min="0"
+                  max="4"
+                  step="0.1"
+                  value={volume}
+                  onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                />
               </>
             )}
           </div>
