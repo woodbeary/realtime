@@ -7,44 +7,32 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string;
   icon?: Icon;
   iconPosition?: 'start' | 'end';
-  iconColor?: 'red' | 'green' | 'grey';
-  iconFill?: boolean;
-  buttonStyle?: 'regular' | 'action' | 'alert' | 'flush' | 'icon'; // Add 'icon' here
+  buttonStyle?: 'primary' | 'secondary' | 'danger' | 'icon';
+  size?: 'small' | 'medium' | 'large';
 }
 
 export function Button({
-  label = 'Okay',
-  icon = void 0,
+  label,
+  icon: IconComponent,
   iconPosition = 'start',
-  iconColor = void 0,
-  iconFill = false,
-  buttonStyle = 'regular',
+  buttonStyle = 'primary',
+  size = 'medium',
+  className,
   ...rest
 }: ButtonProps) {
-  const StartIcon = iconPosition === 'start' ? icon : null;
-  const EndIcon = iconPosition === 'end' ? icon : null;
-  const classList = [];
-  if (iconColor) {
-    classList.push(`icon-${iconColor}`);
-  }
-  if (iconFill) {
-    classList.push(`icon-fill`);
-  }
-  classList.push(`button-style-${buttonStyle}`);
+  const buttonClasses = [
+    'button',
+    `button--${buttonStyle}`,
+    `button--${size}`,
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
-    <button data-component="Button" className={classList.join(' ')} {...rest}>
-      {StartIcon && (
-        <span className="icon icon-start">
-          <StartIcon />
-        </span>
+    <button className={buttonClasses} {...rest}>
+      {IconComponent && (
+        <IconComponent className={`button__icon ${iconPosition === 'end' ? 'button__icon--end' : ''}`} />
       )}
-      {buttonStyle !== 'icon' && <span className="label">{label}</span>}
-      {EndIcon && (
-        <span className="icon icon-end">
-          <EndIcon />
-        </span>
-      )}
+      {label && <span className="button__label">{label}</span>}
     </button>
   );
 }

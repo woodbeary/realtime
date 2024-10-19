@@ -22,7 +22,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock, RotateCw } from 'react-feather';
+import { X, Edit, Zap, ArrowUp, ArrowDown, Camera, Maximize2, Minimize2, Mic, Lock, RotateCw, Loader, Play, Square, Volume2 } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
@@ -34,6 +34,7 @@ import axios from 'axios';
 import { CameraFeed } from '../components/CameraFeed';
 import debounce from 'lodash/debounce';
 import { useMediaQuery } from 'react-responsive';
+import { ErrorMessage } from '../components/ErrorMessage';
 
 /**
  * Type for result from get_weather() function call
@@ -169,7 +170,14 @@ export function ConsolePage() {
 
   const [isFrontCamera, setIsFrontCamera] = useState(true);
 
+
+
+  const [error, setError] = useState<string | null>(null);
+
+  const [isRetrying, setIsRetrying] = useState(false);
   const [volume, setVolume] = useState(2);
+
+  const [showAlphaNotice, setShowAlphaNotice] = useState(true);
 
   /**
    * Utility for formatting the timing of logs
@@ -214,6 +222,7 @@ export function ConsolePage() {
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
+    try {
     // Set state variables
     startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
@@ -247,6 +256,12 @@ export function ConsolePage() {
     ]);
 
     console.log("Push-to-talk mode set up successfully.");
+    } catch (error) {
+      console.error("Error during connection:", error);
+      setError("Failed to connect. Please try again later.");
+      setIsConnected(false);
+      throw error;
+    }
   }, []);
 
   /**
@@ -723,19 +738,20 @@ export function ConsolePage() {
       console.log("All systems stopped.");
     } else {
       console.log("Starting all systems...");
-      const cameraStarted = await startCamera();
-      if (cameraStarted) {
-        try {
+      try {
+        const cameraStarted = await startCamera();
+        if (cameraStarted) {
           await connectConversation();
           setIsStarted(true);
           console.log("All systems started successfully.");
-        } catch (error) {
-          console.error("Error starting conversation:", error);
-          stopCamera();
-          setIsStarted(false);
+        } else {
+          setError("Failed to start camera. Please check your camera permissions.");
         }
-      } else {
-        console.log("Failed to start all systems due to camera error.");
+      } catch (error) {
+        console.error("Error starting systems:", error);
+        setError("Failed to start the application. Please try again later.");
+        stopCamera();
+        setIsStarted(false);
       }
     }
   }, [isStarted, connectConversation, disconnectConversation, startCamera, stopCamera]);
@@ -775,69 +791,142 @@ export function ConsolePage() {
     wavStreamPlayerRef.current.setVolume(newVolume);
   }, []);
 
-  /**
-   * Render the application
-   */
-  return (
-    <div data-component="ConsolePage">
-      <div className="content-top">
-        <div className="content-title">
-          <img src="/logo.png" alt="Roasted.lol logo" />
-          <span className="web-name">roasted.lol</span>
-        </div>
+  const handleError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+    disconnectConversation();
+    stopCamera();
+    setIsStarted(false);
+  }, [disconnectConversation, stopCamera]);
+
+  const retryConnection = useCallback(() => {
+    if (isRetrying) return; // Prevent multiple retries
+    setIsRetrying(true);
+    setError(null);
+    setTimeout(() => {
+      toggleAll();
+      setIsRetrying(false);
+    }, 5000); // 5 second delay
+  }, [toggleAll, isRetrying]);
+
+  useEffect(() => {
+    const client = clientRef.current;
+    client.on('error', (event: any) => {
+      console.error(event);
+      handleError('Server connection error');
+    });
+    // ... (other event listeners)
+  }, [handleError]);
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Oops! Something went wrong</h2>
+        <p>{error}</p>
+        {isRetrying ? (
+          <div className="loading">
+            <Loader className="spinner" />
+            <p>Retrying...</p>
+          </div>
+        ) : (
+          <Button
+            label="Try Again"
+            buttonStyle="primary" // Changed from "action" to "primary"
+            onClick={retryConnection}
+          />
+        )}
+        <p>
+          If the problem persists, please contact me for support:{' '}
+          <a href="https://twitter.com/imjacoblopez" target="_blank" rel="noopener noreferrer">
+            @imjacoblopez
+          </a>
+        </p>
       </div>
-      <div className={`content-main centered`}>
+    );
+  }
+
+  return (
+    <div className="console-page">
+      <header className="header">
+        <div className="header-content">
+          <img src="/logo.png" alt="Roasted.lol logo" className="logo" />
+          <h1 className="title">roasted.lol</h1>
+        </div>
+        <div className="alpha-tag">ALPHA</div>
+      </header>
+      {showAlphaNotice && (
+        <div className="alpha-notice">
+          <p>This is an alpha version. Features may be unstable and subject to change.</p>
+          <button onClick={() => setShowAlphaNotice(false)} className="dismiss-button">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      <main className="main-content">
         <div className="camera-container">
           <CameraFeed stream={cameraStream} ref={videoRef} isFullScreen={isFullScreen} />
-          <div className="button-container">
-            <Button
-              label={isStarted ? "Stop" : "Start"}
-              buttonStyle={isStarted ? "alert" : "action"}
-              onClick={toggleAll}
-              className={isStarted ? "small-button" : "large-button"}
-            />
-            {isStarted && (
-              <>
-                {!isMobile && (
-                  <Button
-                    icon={isFullScreen ? Minimize2 : Maximize2}
-                    buttonStyle="icon"
-                    onClick={toggleFullScreen}
-                    className="small-button button-style-icon"
-                  />
-                )}
+          {isStarted ? (
+            <>
+              <Button
+                icon={X}
+                onClick={toggleAll}
+                buttonStyle="danger"
+                size="medium"
+                className="stop-button"
+              />
+              <div className="controls">
                 <Button
                   icon={Mic}
                   label="Push to Talk"
-                  buttonStyle={isRecording ? "alert" : "action"}
                   onMouseDown={startRecording}
                   onMouseUp={stopRecording}
-                  onMouseLeave={stopRecording}
                   onTouchStart={startRecording}
                   onTouchEnd={stopRecording}
-                  className="large-button"
+                  buttonStyle={isRecording ? "primary" : "secondary"}
+                  size="large"
+                  className="push-to-talk-button"
                 />
                 {isMobile && (
                   <Button
                     icon={RotateCw}
-                    buttonStyle="icon"
                     onClick={handleCameraFlip}
-                    className="small-button button-style-icon"
+                    buttonStyle="secondary"
+                    size="medium"
+                    className="flip-camera-button"
                   />
                 )}
-                <input
-                  type="range"
-                  min="0"
-                  max="4"
-                  step="0.1"
-                  value={volume}
-                  onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                />
-              </>
-            )}
-          </div>
+                <div className="volume-control">
+                  <Volume2 size={20} />
+                  <input
+                    type="range"
+                    min="0"
+                    max="4"
+                    step="0.1"
+                    value={volume}
+                    onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                    className="volume-slider"
+                  />
+                </div>
+              </div>
+              <Button
+                icon={isFullScreen ? Minimize2 : Maximize2}
+                onClick={toggleFullScreen}
+                buttonStyle="secondary"
+                size="medium"
+                className="fullscreen-button"
+              />
+            </>
+          ) : (
+            <Button
+              icon={Play}
+              label="Start"
+              onClick={toggleAll}
+              buttonStyle="primary"
+              size="large"
+              className="start-button"
+            />
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

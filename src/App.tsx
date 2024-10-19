@@ -1,5 +1,6 @@
 import { ConsolePage } from './pages/ConsolePage';
 import './App.scss';
+import '@radix-ui/themes/styles.css';
 
 function App() {
   return (

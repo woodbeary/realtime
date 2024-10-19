@@ -167,7 +167,8 @@ export class WavStreamPlayer {
   // Add a method to adjust volume
   setVolume(volume) {
     if (this.gainNode) {
-      this.gainNode.gain.setValueAtTime(volume, this.context.currentTime);
+      // Allow for volumes up to 10 times the original
+      this.gainNode.gain.setValueAtTime(volume * 5, this.context.currentTime);
     }
   }
 }

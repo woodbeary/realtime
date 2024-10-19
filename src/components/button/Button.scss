@@ -1,102 +1,130 @@
-[data-component='Button'] {
-  display: flex;
+.button {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-family: 'Roboto Mono', monospace;
-  font-size: 12px;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
   border: none;
-  background-color: #ececf1;
-  color: #101010;
-  border-radius: 1000px;
-  padding: 8px 24px;
-  min-height: 42px;
-  transition: transform 0.1s ease-in-out, background-color 0.1s ease-in-out;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
   outline: none;
+  padding: 0 20px;
+  position: relative;
+  overflow: hidden;
 
-  &.button-style-action {
-    background-color: #101010;
-    color: #ececf1;
-    &:hover:not([disabled]) {
-      background-color: #404040;
-    }
-  }
-
-  &.button-style-alert {
-    background-color: #f00;
-    color: #ececf1;
-    &:hover:not([disabled]) {
-      background-color: #f00;
-    }
-  }
-
-  &.button-style-flush {
-    background-color: rgba(255, 255, 255, 0);
-  }
-
-  &[disabled] {
-    color: #999;
-  }
-
-  &:not([disabled]) {
-    cursor: pointer;
-  }
-
-  &:hover:not([disabled]) {
-    background-color: #d8d8d8;
-  }
-
-  &:active:not([disabled]) {
-    transform: translateY(1px);
-  }
-
-  .icon {
-    display: flex;
-    &.icon-start {
-      margin-left: -8px;
-    }
-    &.icon-end {
-      margin-right: -8px;
-    }
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  &.icon-red .icon {
-    color: #cc0000;
-  }
-  &.icon-green .icon {
-    color: #009900;
-  }
-  &.icon-grey .icon {
-    color: #909090;
-  }
-  &.icon-fill {
-    svg {
-      fill: currentColor;
-    }
-  }
-
-  &.button-style-icon {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background-color: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    background-color: #ececf1;
-    
-    &:hover:not([disabled]) {
-      background-color: #d8d8d8;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+  }
+
+  &:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+
+    &--end {
+      margin-right: 0;
+      margin-left: 8px;
+    }
+  }
+
+  &__label {
+    position: relative;
+    z-index: 1;
+  }
+
+  // Button styles
+  &--primary {
+    background-color: #3498db;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      background-color: #2980b9;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  &--secondary {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    box-shadow: 0 4px 6px rgba(236, 240, 241, 0.2);
+
+    &:hover {
+      background-color: #bdc3c7;
+      box-shadow: 0 6px 8px rgba(236, 240, 241, 0.3);
+    }
+  }
+
+  &--danger {
+    background-color: #e74c3c;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(231, 76, 60, 0.2);
+
+    &:hover {
+      background-color: #c0392b;
+      box-shadow: 0 6px 8px rgba(231, 76, 60, 0.3);
+    }
+  }
+
+  &--icon {
+    padding: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: transparent;
+    color: #2c3e50;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
-    .icon {
+    .button__icon {
       margin: 0;
     }
+  }
+
+  // Button sizes
+  &--small {
+    font-size: 12px;
+    height: 32px;
+  }
+
+  &--medium {
+    font-size: 14px;
+    height: 40px;
+  }
+
+  &--large {
+    font-size: 16px;
+    height: 48px;
+    padding: 0 24px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &:active {
+    transform: translateY(2px);
   }
 }
