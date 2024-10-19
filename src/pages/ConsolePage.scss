@@ -824,7 +824,7 @@
 
     .controls {
       position: absolute;
-      bottom: 1.5rem;
+      bottom: 20%; // Changed from 1.5rem to 20%
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -837,6 +837,8 @@
       backdrop-filter: blur(10px);
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       transition: all 0.3s ease;
+      width: 90%; // Added to ensure consistent width
+      max-width: 300px; // Added to limit width on larger screens
 
       &:hover {
         background-color: rgba(33, 37, 41, 0.9);
@@ -846,7 +848,7 @@
 
     .start-button {
       position: absolute;
-      bottom: 1.5rem;
+      bottom: 20%; // Changed from 1.5rem to 20%
       left: 50%;
       transform: translateX(-50%);
     }
@@ -921,6 +923,34 @@
             transform: scale(1.2);
           }
         }
+      }
+    }
+
+    .initializing-message {
+      position: absolute;
+      bottom: 20%; // Changed from 1.5rem to 20%
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      background-color: rgba(33, 37, 41, 0.8);
+      padding: 1rem;
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      color: #ffffff;
+      text-align: center;
+      max-width: 80%;
+
+      .spinner {
+        animation: spin 1s linear infinite;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
       }
     }
   }
@@ -1054,10 +1084,13 @@
       aspect-ratio: 9 / 16;
 
       .controls {
-        bottom: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.75rem;
+        bottom: 25%; // Increased for mobile
+        width: 95%; // Slightly wider on mobile
+      }
+
+      .start-button,
+      .initializing-message {
+        bottom: 25%; // Increased for mobile
       }
     }
 
@@ -1075,6 +1108,8 @@
 }
 
 // Add any additional custom styles here
+
+
 
 
 

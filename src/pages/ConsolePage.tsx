@@ -179,6 +179,8 @@ export function ConsolePage() {
 
   const [showAlphaNotice, setShowAlphaNotice] = useState(true);
 
+  const [isServerInitializing, setIsServerInitializing] = useState(false);
+
   /**
    * Utility for formatting the timing of logs
    */
@@ -729,14 +731,7 @@ export function ConsolePage() {
   const toggleAll = useCallback(async () => {
     if (!isStarted) {
       enableAudio();
-    }
-    if (isStarted) {
-      console.log("Stopping all systems...");
-      await disconnectConversation();
-      stopCamera();
-      setIsStarted(false);
-      console.log("All systems stopped.");
-    } else {
+      setIsServerInitializing(true);
       console.log("Starting all systems...");
       try {
         const cameraStarted = await startCamera();
@@ -751,8 +746,15 @@ export function ConsolePage() {
         console.error("Error starting systems:", error);
         setError("Failed to start the application. Please try again later.");
         stopCamera();
-        setIsStarted(false);
+      } finally {
+        setIsServerInitializing(false);
       }
+    } else {
+      console.log("Stopping all systems...");
+      await disconnectConversation();
+      stopCamera();
+      setIsStarted(false);
+      console.log("All systems stopped.");
     }
   }, [isStarted, connectConversation, disconnectConversation, startCamera, stopCamera]);
 
@@ -819,28 +821,9 @@ export function ConsolePage() {
 
   if (error) {
     return (
-      <div className="error-container">
-        <h2>Oops! Something went wrong</h2>
-        <p>{error}</p>
-        {isRetrying ? (
-          <div className="loading">
-            <Loader className="spinner" />
-            <p>Retrying...</p>
-          </div>
-        ) : (
-          <Button
-            label="Try Again"
-            buttonStyle="primary" // Changed from "action" to "primary"
-            onClick={retryConnection}
-          />
-        )}
-        <p>
-          If the problem persists, please contact me for support:{' '}
-          <a href="https://twitter.com/imjacoblopez" target="_blank" rel="noopener noreferrer">
-            @imjacoblopez
-          </a>
-        </p>
-      </div>
+      <ErrorMessage
+        message={error}
+      />
     );
   }
 
@@ -916,14 +899,24 @@ export function ConsolePage() {
               />
             </>
           ) : (
-            <Button
-              icon={Play}
-              label="Start"
-              onClick={toggleAll}
-              buttonStyle="primary"
-              size="large"
-              className="start-button"
-            />
+            <>
+              {isServerInitializing ? (
+                <div className="initializing-message">
+                  <Loader className="spinner" />
+                  <p>Initializing server... This may take up to 60 seconds. Thank you for your patience.</p>
+                </div>
+              ) : (
+                <Button
+                  icon={Play}
+                  label="Start"
+                  onClick={toggleAll}
+                  buttonStyle="primary"
+                  size="large"
+                  className="start-button"
+                  disabled={isServerInitializing}
+                />
+              )}
+            </>
           )}
         </div>
       </main>
