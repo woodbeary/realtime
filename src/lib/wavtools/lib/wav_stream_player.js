@@ -27,6 +27,9 @@ export class WavStreamPlayer {
    */
   async connect() {
     this.context = new AudioContext({ sampleRate: this.sampleRate });
+    // Add this line to increase the default volume
+    this.context.gainNode = this.context.createGain();
+    this.context.gainNode.gain.setValueAtTime(1.5, this.context.currentTime); // Increase volume by 50%
     if (this.context.state === 'suspended') {
       await this.context.resume();
     }
