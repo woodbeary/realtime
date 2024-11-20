@@ -867,6 +867,25 @@
 
     .push-to-talk-button {
       width: 100%;
+      -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+      -khtml-user-select: none; /* Konqueror HTML */
+      -moz-user-select: none; /* Firefox */
+      -ms-user-select: none; /* Internet Explorer/Edge */
+      user-select: none; /* Non-prefixed version */
+      touch-action: manipulation; /* Disable double-tap zoom */
+      
+      /* Prevent highlighting/text selection */
+      &::selection {
+        background: transparent;
+      }
+      
+      /* Prevent dragging - using standard and vendor prefixes */
+      -webkit-user-drag: none;
+      -khtml-user-drag: none;
+      -moz-user-drag: none;
+      -o-user-drag: none;
+      drag: none; /* Standard property */
     }
 
     .flip-camera-button {
@@ -882,8 +901,8 @@
 
       .volume-slider {
         flex-grow: 1;
-        -webkit-appearance: none;
-        appearance: none;
+        appearance: none; /* Standard property */
+        -webkit-appearance: none; /* Vendor prefix */
         height: 4px;
         background: rgba(255, 255, 255, 0.3);
         outline: none;
@@ -1102,6 +1121,21 @@
     .volume-control {
       .volume-slider {
         width: 80px;
+      }
+    }
+
+    .push-to-talk-button {
+      /* Additional mobile-specific touch improvements */
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
+      
+      /* Improve touch area for better mobile interaction */
+      min-height: 48px;
+      padding: 12px 24px;
+      
+      /* Optional: Add active state for better feedback */
+      &:active {
+        transform: scale(0.98);
       }
     }
   }
